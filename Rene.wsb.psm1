@@ -150,3 +150,30 @@ function start-wsb {
       write-host "Temporary .wsb file deleted successfully." -foregroundColor green
    }
 }
+
+function start-wsbWithNotepad {
+ #
+ # start-wsbWithNotepad maps the host System32 folder into the
+ # sandbox and copies the host's notepad.exe to the sandbox's
+ # System32 directory.
+ #
+
+   $lang = [System.Globalization.CultureInfo]::CurrentUICulture.Name
+   write-host "lang = $lang"
+
+   $mappedFolders = @(
+      @{
+         hostFolder    = 'C:\Windows\System32'
+         sandboxFolder = 'C:\host\Windows\System32'
+         readOnly      = $true
+      }
+   )
+
+   $psCmd = 'copy-item C:\host\Windows\System32\notepad.exe C:\Windows\System32\notepad.exe'
+
+   $encodedCopyScript = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($psCmd))
+   $logonCommand      = "powershell.exe -noLogo -executionPolicy unrestricted -encodedCommand $encodedCopyScript"
+
+   start-wsb -mappedFolders $mappedFolders -logonCommand $logonCommand
+
+}
