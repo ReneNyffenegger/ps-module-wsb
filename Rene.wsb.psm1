@@ -13,7 +13,7 @@ function start-wsb {
        [switch] $disableAudioInput,
        [switch] $disableClipboardRedirection,
 
-     # Features that are eisabled by default
+     # Features that are disabled by default
        [switch] $enableVideoInput,
        [switch] $enableProtectedClient,
        [switch] $enablePrinterRedirection,
@@ -71,7 +71,7 @@ function start-wsb {
 
    if ($psScript) {
     #
-    # Somewhat convoluted appendment of the new folder because
+    # Somewhat convoluted addition of the new folder because
     # mappedfolder is declared with [array] which makes it
     # fixed size
     #
