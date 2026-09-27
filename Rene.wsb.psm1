@@ -18,6 +18,7 @@ function start-wsb {
        [switch] $enableProtectedClient,
        [switch] $enablePrinterRedirection,
 
+       [switch] $withNotepad,                 # if enabled, logonCommand has no effect
        [string] $logonCommand     = $null,
        [string] $visiblePsCommand = $null,
        [string] $psScript         = $null,
@@ -69,13 +70,33 @@ function start-wsb {
 
    $cmd  = $logonCommand
 
-   if ($psScript) {
+   if ($withNotepad) {
+   #
+   # -withNotepad maps the host System32 folder into the
+   # sandbox and copies the host's notepad.exe to the sandbox's
+   # System32 directory.
+   #
+     $mappedFolders = @($mappedFolders) + @(
+        @{
+           hostFolder    = 'C:\Windows\System32'
+           sandboxFolder = 'C:\host\Windows\System32'
+           readOnly      = $true
+        }
+     )
+
+     $psCmd = 'copy-item C:\host\Windows\System32\notepad.exe C:\Windows\System32\notepad.exe'
+
+     $encodedCopyScript = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($psCmd))
+     $cmd               = "powershell.exe -noLogo -executionPolicy unrestricted -encodedCommand $encodedCopyScript"
+
+   }
+   elseif ($psScript) {
     #
     # Somewhat convoluted addition of the new folder because
     # mappedfolder is declared with [array] which makes it
     # fixed size
     #
-       $psScript_ = resolve-path $psScript 
+       $psScript_ = resolve-path $psScript
        $mappedFolders = @($mappedFolders) + @(
          @{ hostFolder    = split-path $psScript_
             sandboxFolder ='c:\scriptDir'
@@ -86,7 +107,7 @@ function start-wsb {
     #
     # executionPolicy is set to prevent
     #    File C:\scriptDir\...ps1 cannot be loaded because running scripts is disabled on this system.
-    #    
+    #
       $cmd = "cmd /c `"start powershell.exe -noLogo -noExit -executionPolicy unrestricted -file c:/scriptDir/$(split-path $psScript_ -leaf)`""
    }
    elseif ($visiblePsCommand) {
@@ -120,6 +141,7 @@ function start-wsb {
        $root.AppendChild($mappedFoldersElem) | Out-Null
    }
 
+
  # LogonCommand
    if ($cmd) {
        $logonElem = $xml.CreateElement('LogonCommand')
@@ -149,31 +171,4 @@ function start-wsb {
       remove-item -path $tempWsbPath -force -errorAction stop
       write-host "Temporary .wsb file deleted successfully." -foregroundColor green
    }
-}
-
-function start-wsbWithNotepad {
- #
- # start-wsbWithNotepad maps the host System32 folder into the
- # sandbox and copies the host's notepad.exe to the sandbox's
- # System32 directory.
- #
-
-   $lang = [System.Globalization.CultureInfo]::CurrentUICulture.Name
-   write-host "lang = $lang"
-
-   $mappedFolders = @(
-      @{
-         hostFolder    = 'C:\Windows\System32'
-         sandboxFolder = 'C:\host\Windows\System32'
-         readOnly      = $true
-      }
-   )
-
-   $psCmd = 'copy-item C:\host\Windows\System32\notepad.exe C:\Windows\System32\notepad.exe'
-
-   $encodedCopyScript = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($psCmd))
-   $logonCommand      = "powershell.exe -noLogo -executionPolicy unrestricted -encodedCommand $encodedCopyScript"
-
-   start-wsb -mappedFolders $mappedFolders -logonCommand $logonCommand
-
 }
